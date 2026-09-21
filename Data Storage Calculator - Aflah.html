@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decimal Storage Converter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#000000',
+                        zincDark: '#09090b',
+                        zincBorder: '#27272a',
+                        zincHover: '#18181b',
+                        zincMuted: '#71717a',
+                        zincSubtle: '#a1a1aa',
+                        zincLight: '#fafafa'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #000000;
+            color: #fafafa;
+        }
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 2px;
+        }
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none;
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        /* Card styling */
+        .unit-card {
+            background-color: #09090b;
+            border: 1px solid #27272a;
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .unit-card:hover {
+            border-color: #3f3f46;
+            background-color: #121215;
+        }
+        .unit-card.active-unit {
+            border-color: #ffffff !important;
+            background-color: #121215 !important;
+        }
+        #toast {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-black text-zincLight antialiased flex flex-col justify-between selection:bg-zinc-800 selection:text-white">
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 w-full flex-grow flex flex-col justify-center">
+        
+        <!-- Header -->
+        <header class="mb-8 border-b border-zincBorder pb-5 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight text-white">Decimal Storage Converter</h1>
+                <p class="text-xs text-zincMuted mt-0.5">SI Base-1000 standard calculator</p>
+            </div>
+            <div class="hidden sm:flex items-center gap-2 text-[11px] mono-font text-zincSubtle bg-zincDark px-2.5 py-1.5 border border-zincBorder rounded-md">
+                <i class="fa-solid fa-microchip text-zincMuted"></i>
+                <span>1 KB = 10³ B</span>
+            </div>
+        </header>
+
+        <section class="mb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <!-- Quantity Input Field -->
+                <div class="sm:col-span-8 flex flex-col gap-1.5">
+                    <label for="amountInput" class="text-[11px] font-medium uppercase tracking-wider text-zincMuted">
+                        Amount
+                    </label>
+                    <div class="relative flex items-center">
+                        <input type="number" id="amountInput" value="1" min="0" step="any" oninput="recalculate()"
+                            class="w-full px-4 py-3 text-xl mono-font bg-zincDark border border-zincBorder rounded-lg focus:border-white outline-none transition-colors text-white placeholder-zinc-700">
+                        <button onclick="clearInput()" class="absolute right-3.5 text-zincMuted hover:text-white text-xs transition-colors p-1" title="Clear input">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Unit Selection Dropdown -->
+                <div class="sm:col-span-4 flex flex-col gap-1.5">
+                    <label for="unitSelect" class="text-[11px] font-medium uppercase tracking-wider text-zincMuted">
+                        Select Unit
+                    </label>
+                    <div class="relative">
+                        <select id="unitSelect" onchange="recalculate()"
+                            class="w-full px-4 py-3 text-sm font-medium bg-zincDark border border-zincBorder rounded-lg focus:border-white outline-none transition-colors text-white appearance-none cursor-pointer">
+                            <option value="B">Bytes (B)</option>
+                            <option value="KB">Kilobytes (KB)</option>
+                            <option value="MB">Megabytes (MB)</option>
+                            <option value="GB">Gigabytes (GB)</option>
+                            <option value="TB">Terabytes (TB)</option>
+                            <option value="PB" selected>Petabytes (PB)</option>
+                            <option value="EB">Exabytes (EB)</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-3.5 pointer-events-none text-zincMuted">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-[11px] font-medium uppercase tracking-wider text-zincMuted">Conversions</h2>
+                <span class="text-[10px] mono-font text-zincMuted">Click card to copy value</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="cardsGrid">
+                <!-- Dynamic cards injected here -->
+            </div>
+        </section>
+
+        <section class="bg-zincDark border border-zincBorder rounded-lg p-4 mb-4">
+            <h3 class="text-[11px] font-medium uppercase tracking-wider text-zincSubtle mb-1.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-calculator text-[10px] text-zincMuted"></i>
+                Logic & Calculation
+            </h3>
+            <p class="text-xs text-zincMuted leading-relaxed">
+                Calculations use the standard decimal SI scale (<span class="mono-font text-zincSubtle">1000<sup>n</sup></span>). First, the input is normalized to base Bytes: 
+                <span class="mono-font text-zincSubtle">Bytes = Value × 1000<sup>n</sup></span>. Then, base Bytes are converted to each target unit: 
+                <span class="mono-font text-zincSubtle">Target = Bytes ÷ 1000<sup>m</sup></span>.
+            </p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-5 border-t border-zincBorder text-center text-[11px] text-zincMuted">
+        <span>Decimal Standard (1000<sup>n</sup>)</span>
+    </footer>
+
+    <!-- Copy Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-10 opacity-0 pointer-events-none bg-white text-black px-3.5 py-2 rounded-md text-xs font-semibold shadow-xl flex items-center gap-2 z-50">
+        <i class="fa-solid fa-check text-xs"></i>
+        <span id="toastMsg">Copied value</span>
+    </div>
+
+    <script>
+        // Strictly Base-1000 Decimal Configuration
+        const UNITS_CONFIG = [
+            { key: 'B', name: 'Bytes', symbol: 'B', exp: 0 },
+            { key: 'KB', name: 'Kilobytes', symbol: 'KB', exp: 1 },
+            { key: 'MB', name: 'Megabytes', symbol: 'MB', exp: 2 },
+            { key: 'GB', name: 'Gigabytes', symbol: 'GB', exp: 3 },
+            { key: 'TB', name: 'Terabytes', symbol: 'TB', exp: 4 },
+            { key: 'PB', name: 'Petabytes', symbol: 'PB', exp: 5 },
+            { key: 'EB', name: 'Exabytes', symbol: 'EB', exp: 6 }
+        ];
+
+        // Initialize output unit cards
+        function initCards() {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = '';
+
+            UNITS_CONFIG.forEach(unit => {
+                const card = document.createElement('div');
+                card.id = `card-${unit.key}`;
+                card.className = `unit-card p-3.5 rounded-lg flex flex-col justify-between cursor-pointer group`;
+                card.onclick = () => copyValue(unit.key);
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-zincMuted group-hover:text-zincSubtle transition-colors">${unit.name}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] mono-font text-zincMuted bg-black border border-zincBorder px-1.5 py-0.5 rounded">
+                                10<sup>${unit.exp * 3}</sup>
+                            </span>
+                            <i class="fa-regular fa-copy text-xs text-zincMuted group-hover:text-white transition-colors"></i>
+                        </div>
+                    </div>
+                    <div id="val-${unit.key}" class="text-base font-semibold mono-font text-white truncate">
+                        0
+                    </div>
+                    <div class="text-[10px] text-zincMuted mt-0.5">
+                        ${unit.symbol}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Clean numeric precision formatter
+        function formatNumber(num) {
+            if (num === 0) return '0';
+            if (isNaN(num) || !isFinite(num)) return '0';
+
+            if (num < 0.000001) return num.toExponential(4);
+            if (num < 0.001) return num.toFixed(6);
+            if (num < 1) return num.toFixed(4);
+            if (num >= 1e18) return num.toExponential(4);
+
+            return num.toLocaleString('en-US', { maximumFractionDigits: 4 });
+        }
+
+        // Recalculate conversions
+        function recalculate() {
+            const amountInput = document.getElementById('amountInput');
+            const unitSelect = document.getElementById('unitSelect');
+
+            let val = parseFloat(amountInput.value);
+            if (isNaN(val) || val < 0) val = 0;
+
+            const selectedUnitKey = unitSelect.value;
+            const srcUnit = UNITS_CONFIG.find(u => u.key === selectedUnitKey);
+
+            // Convert input value to base Bytes (1000^exp)
+            const baseBytes = val * Math.pow(1000, srcUnit.exp);
+
+            // Populate each output card
+            UNITS_CONFIG.forEach(unit => {
+                const convertedVal = baseBytes / Math.pow(1000, unit.exp);
+                const valEl = document.getElementById(`val-${unit.key}`);
+                const cardEl = document.getElementById(`card-${unit.key}`);
+
+                if (valEl) {
+                    valEl.textContent = formatNumber(convertedVal);
+                }
+
+                if (cardEl) {
+                    if (unit.key === selectedUnitKey) {
+                        cardEl.classList.add('active-unit');
+                    } else {
+                        cardEl.classList.remove('active-unit');
+                    }
+                }
+            });
+        }
+
+        // Clear input field helper
+        function clearInput() {
+            document.getElementById('amountInput').value = '';
+            document.getElementById('amountInput').focus();
+            recalculate();
+        }
+
+        // Copy value trigger
+        function copyValue(unitKey) {
+            const valEl = document.getElementById(`val-${unitKey}`);
+            if (!valEl) return;
+
+            const textToCopy = `${valEl.textContent.trim()} ${unitKey}`;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textToCopy);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = textToCopy;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+
+            showToast(`Copied ${textToCopy}`);
+        }
+
+        // Show subtle toast message
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = message;
+
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 1800);
+        }
+
+        // Application startup
+        window.onload = function() {
+            initCards();
+            recalculate();
+        };
+    </script>
+</body>
+</html>
